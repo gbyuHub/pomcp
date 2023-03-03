@@ -3,6 +3,7 @@
 
 #include "mcts.h"
 #include "simulator.h"
+#include "rocksample.h"
 #include "statistic.h"
 #include <fstream>
 
@@ -16,6 +17,9 @@ struct RESULTS
     STATISTIC Reward;
     STATISTIC DiscountedReturn;
     STATISTIC UndiscountedReturn;
+    STATISTIC CollectedBadRocks;
+    STATISTIC CollectedGoodRocks;
+    STATISTIC NumCheckAction;
 };
 
 inline void RESULTS::Clear()

@@ -1,15 +1,16 @@
 #include "battleship.h"
 #include "mcts.h"
-#include "network.h"
-#include "pocman.h"
+// #include "network.h"
+// #include "pocman.h"
 #include "rocksample.h"
-#include "tag.h"
+// #include "tag.h"
 #include "experiment.h"
 #include <boost/program_options.hpp>
 
 using namespace std;
 using namespace boost::program_options;
 
+/*
 void UnitTests()
 {
     cout << "Testing UTILS" << endl;
@@ -19,6 +20,7 @@ void UnitTests()
     cout << "Testing MCTS" << endl;
     MCTS::UnitTest();
 }
+*/
 
 void disableBufferedIO(void)
 {
@@ -69,6 +71,9 @@ int main(int argc, char* argv[])
         ("smarttreecount", value<int>(&knowledge.SmartTreeCount), "Prior count for preferred actions during smart tree search")
         ("smarttreevalue", value<double>(&knowledge.SmartTreeValue), "Prior value for preferred actions during smart tree search")
         ("disabletree", value<bool>(&searchParams.DisableTree), "Use 1-ply rollout action selection")
+        ("risksensitive", value<bool>(&searchParams.RiskSensitive), "Learn risk sensitive policy")
+        ("beta", value<double>(&searchParams.beta), "Beta value in exp function (only valid in risk sensitive setting)")
+        ("considerpast", value<bool>(&searchParams.ConsiderPast), "Consider cumulative past reward")
         ;
 
     variables_map vm;
@@ -87,41 +92,43 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-    if (vm.count("test"))
-    {
-        cout << "Running unit tests" << endl;
-        UnitTests();
-        return 0;
-    }
+    // if (vm.count("test"))
+    // {
+    //     cout << "Running unit tests" << endl;
+    //     UnitTests();
+    //     return 0;
+    // }
 
     SIMULATOR* real = 0;
     SIMULATOR* simulator = 0;
 
-    if (problem == "battleship")
-    {
-        real = new BATTLESHIP(size, size, number);
-        simulator = new BATTLESHIP(size, size, number);
-    }
-    else if (problem == "pocman")
-    {
-        real = new FULL_POCMAN;
-        simulator = new FULL_POCMAN;
-    }
-    else if (problem == "network")
-    {
-        real = new NETWORK(size, number);
-        simulator = new NETWORK(size, number);
-    }
-    else if (problem == "rocksample")
+    // only consider rocksample problem for now!
+    // if (problem == "battleship")
+    // {
+    //     real = new BATTLESHIP(size, size, number);
+    //     simulator = new BATTLESHIP(size, size, number);
+    // }
+    // else if (problem == "pocman")
+    // {
+    //     real = new FULL_POCMAN;
+    //     simulator = new FULL_POCMAN;
+    // }
+    // else if (problem == "network")
+    // {
+    //     real = new NETWORK(size, number);
+    //     simulator = new NETWORK(size, number);
+    // }
+    // else if (problem == "rocksample")
+    if (problem == "rocksample")
     {
         real = new ROCKSAMPLE(size, number);
         simulator = new ROCKSAMPLE(size, number);
     }
-    else if (problem == "tag")
-    {
-        real = new TAG(number);
-        simulator = new TAG(number);
-    }
+    // else if (problem == "tag")
+    // {
+    //     real = new TAG(number);
+    //     simulator = new TAG(number);
+    // }
     else 
     {
         cout << "Unknown problem" << endl;

@@ -22,7 +22,10 @@ MCTS::PARAMS::PARAMS()
     UseRave(false),
     RaveDiscount(1.0),
     RaveConstant(0.01),
-    DisableTree(false)
+    DisableTree(false),
+    RiskSensitive(false),
+    beta(-0.8),
+    ConsiderPast(false)
 {
 }
 
@@ -74,7 +77,7 @@ bool MCTS::Update(int action, int observation, double reward)
     if (beliefs.Empty() && (!vnode || vnode->Beliefs().Empty()))
         return false;
 
-    if (Params.Verbose >= 1)
+    if (Params.Verbose >= 2)
         Simulator.DisplayBeliefs(beliefs, cout);
 
     // Find a state to initialise prior (only requires fully observed state)
@@ -92,13 +95,13 @@ bool MCTS::Update(int action, int observation, double reward)
     return true;
 }
 
-int MCTS::SelectAction()
+int MCTS::SelectAction(double past_cumulative_rew)
 {
     if (Params.DisableTree)
         RolloutSearch();
     else
-        UCTSearch();
-    return GreedyUCB(Root, false);
+        UCTSearch(past_cumulative_rew);
+    return GreedyUCB(Root, false, past_cumulative_rew);
 }
 
 void MCTS::RolloutSearch()
@@ -137,7 +140,7 @@ void MCTS::RolloutSearch()
 	}
 }
 
-void MCTS::UCTSearch()
+void MCTS::UCTSearch(double cumulative_past_rew)
 {
     ClearStatistics();
     int historyDepth = History.Size();
@@ -147,7 +150,7 @@ void MCTS::UCTSearch()
         STATE* state = Root->Beliefs().CreateSample(Simulator);
         Simulator.Validate(*state);
         Status.Phase = SIMULATOR::STATUS::TREE;
-        if (Params.Verbose >= 2)
+        if (Params.Verbose >= 1)
         {
             cout << "Starting simulation" << endl;
             Simulator.DisplayState(*state, cout);
@@ -155,7 +158,7 @@ void MCTS::UCTSearch()
 
         TreeDepth = 0;
         PeakTreeDepth = 0;
-        double totalReward = SimulateV(*state, Root);
+        double totalReward = SimulateV(*state, Root, cumulative_past_rew);
         StatTotalReward.Add(totalReward);
         StatTreeDepth.Add(PeakTreeDepth);
 
@@ -171,9 +174,9 @@ void MCTS::UCTSearch()
     DisplayStatistics(cout);
 }
 
-double MCTS::SimulateV(STATE& state, VNODE* vnode)
+double MCTS::SimulateV(STATE& state, VNODE* vnode, double cumulative_past_rew)
 {
-    int action = GreedyUCB(vnode, true);
+    int action = GreedyUCB(vnode, true, cumulative_past_rew);
 
     PeakTreeDepth = TreeDepth;
     if (TreeDepth >= Params.MaxDepth) // search horizon reached
@@ -183,13 +186,13 @@ double MCTS::SimulateV(STATE& state, VNODE* vnode)
         AddSample(vnode, state);
 
     QNODE& qnode = vnode->Child(action);
-    double totalReward = SimulateQ(state, qnode, action);
+    double totalReward = SimulateQ(state, qnode, action, cumulative_past_rew);
     vnode->Value.Add(totalReward);
     AddRave(vnode, totalReward);
     return totalReward;
 }
 
-double MCTS::SimulateQ(STATE& state, QNODE& qnode, int action)
+double MCTS::SimulateQ(STATE& state, QNODE& qnode, int action, double cumulative_past_rew)
 {
     int observation;
     double immediateReward, delayedReward = 0;
@@ -216,7 +219,7 @@ double MCTS::SimulateQ(STATE& state, QNODE& qnode, int action)
     {
         TreeDepth++;
         if (vnode)
-            delayedReward = SimulateV(state, vnode);
+            delayedReward = SimulateV(state, vnode, cumulative_past_rew + immediateReward);
         else
             delayedReward = Rollout(state);
         TreeDepth--;
@@ -265,7 +268,7 @@ void MCTS::AddSample(VNODE* node, const STATE& state)
     }
 }
 
-int MCTS::GreedyUCB(VNODE* vnode, bool ucb) const
+int MCTS::GreedyUCB(VNODE* vnode, bool ucb, double cumulative_past_rew) const
 {
     static vector<int> besta;
     besta.clear();
@@ -300,6 +303,15 @@ int MCTS::GreedyUCB(VNODE* vnode, bool ucb) const
 
         if (ucb)
             q += FastUCB(N, n, logN);
+
+        if (Params.RiskSensitive) 
+        {
+            // Consider a simple concave function: x^0.5
+            // Ignore unavailable actions whose q values are -1e+10
+            // Add 80 as a baseline, since the worst case would be sampling 8 bad rocks, with undiscounted return -80 
+            if (Params.ConsiderPast) q += cumulative_past_rew; 
+            if (q + 80 >= 0) q = sqrt(q + 80);
+        }
 
         if (q >= bestq)
         {
@@ -455,7 +467,7 @@ void MCTS::DisplayPolicy(int depth, ostream& ostr) const
 }
 
 //-----------------------------------------------------------------------------
-
+/* 
 void MCTS::UnitTest()
 {
     UnitTestGreedy();
@@ -561,5 +573,5 @@ void MCTS::UnitTestSearch(int depth)
     double optimalValue = testSimulator.OptimalValue();
     assert(fabs(optimalValue - rootValue) < 0.1);
 }
-
+*/
 //-----------------------------------------------------------------------------

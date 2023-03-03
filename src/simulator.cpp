@@ -37,6 +37,10 @@ SIMULATOR::~SIMULATOR()
 { 
 }
 
+string SIMULATOR::GetClassName() const {
+    return "SIMULATOR";
+}
+
 void SIMULATOR::Validate(const STATE& state) const 
 { 
 }

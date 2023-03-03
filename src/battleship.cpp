@@ -26,6 +26,10 @@ BATTLESHIP::BATTLESHIP(int xsize, int ysize, int maxlength)
     TotalRemaining = MaxLength - 1;
 }
 
+string BATTLESHIP::GetClassName() const 
+{
+    return "BATTLESHIP";
+}
 STATE* BATTLESHIP::Copy(const STATE& state) const
 {
     assert(state.IsAllocated());

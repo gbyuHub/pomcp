@@ -46,20 +46,39 @@ void EXPERIMENT::Run()
     double undiscountedReturn = 0.0;
     double discountedReturn = 0.0;
     double discount = 1.0;
+    double cumulative_past_rew = 0.0;
     bool terminal = false;
     bool outOfParticles = false;
     int t;
+    bool is_rocksample_problem = (Real.GetClassName() == "ROCKSAMPLE" ? true : false);
+    // variables only for rocksample problem
+    int collected_good_rocks_num = 0;
+    int collected_bad_rocks_num = 0;
+    int num_check_action = 0;
 
     STATE* state = Real.CreateStartState();
     if (SearchParams.Verbose >= 1)
+    {
         Real.DisplayState(*state, cout);
+    }
+    if (is_rocksample_problem) {
+        ROCKSAMPLE_STATE* rocksample_state = safe_cast<ROCKSAMPLE_STATE*> (state);
+        cout << "Number of bad rocks in true environment: " << rocksample_state->num_bad_rocks << endl;
+    }
 
     for (t = 0; t < ExpParams.NumSteps; t++)
     {
         int observation;
         double reward;
-        int action = mcts.SelectAction();
+        int action = mcts.SelectAction(cumulative_past_rew);
         terminal = Real.Step(*state, action, observation, reward);
+        cumulative_past_rew += reward;
+
+        if (is_rocksample_problem) {
+            if (action > 4) num_check_action++;
+            if (reward < 0) collected_bad_rocks_num++;
+            else if (!terminal && reward > 0) collected_good_rocks_num++; 
+        }
 
         Results.Reward.Add(reward);
         undiscountedReturn += reward;
@@ -106,6 +125,12 @@ void EXPERIMENT::Run()
             int action = Simulator.SelectRandom(*state, history, mcts.GetStatus());
             terminal = Real.Step(*state, action, observation, reward);
 
+            if (is_rocksample_problem) {
+                if (action > 4) num_check_action++;
+                if (reward < 0) collected_bad_rocks_num++;
+                else if (!terminal && reward > 0) collected_good_rocks_num++; 
+            }
+
             Results.Reward.Add(reward);
             undiscountedReturn += reward;
             discountedReturn += reward * discount;
@@ -132,10 +157,17 @@ void EXPERIMENT::Run()
     Results.Time.Add(timer.elapsed());
     Results.UndiscountedReturn.Add(undiscountedReturn);
     Results.DiscountedReturn.Add(discountedReturn);
+    Results.CollectedBadRocks.Add(collected_bad_rocks_num);
+    Results.CollectedGoodRocks.Add(collected_good_rocks_num);
+    Results.NumCheckAction.Add(num_check_action);
     cout << "Discounted return = " << discountedReturn
         << ", average = " << Results.DiscountedReturn.GetMean() << endl;
     cout << "Undiscounted return = " << undiscountedReturn
         << ", average = " << Results.UndiscountedReturn.GetMean() << endl;
+    cout << "Number of bad rocks collected = " << collected_bad_rocks_num << endl;
+    cout << "Number of good rocks collected = " << collected_good_rocks_num << endl;
+    cout << "Number of check actions = " << num_check_action << endl;
+    cout << "Number of steps = " << t << endl;
 }
 
 void EXPERIMENT::MultiRun()
@@ -182,7 +214,13 @@ void EXPERIMENT::DiscountedReturn()
             << " +- " << Results.UndiscountedReturn.GetStdErr() << endl
             << "Discounted return = " << Results.DiscountedReturn.GetMean()
             << " +- " << Results.DiscountedReturn.GetStdErr() << endl
-            << "Time = " << Results.Time.GetMean() << endl;
+            << "Time = " << Results.Time.GetMean() << endl
+            << "Collected bad rocks = " << Results.CollectedBadRocks.GetMean()
+            << " +- " << Results.CollectedBadRocks.GetStdErr() << endl
+            << "Collected good rocks = " << Results.CollectedGoodRocks.GetMean()
+            << " +- " << Results.CollectedGoodRocks.GetStdErr() << endl
+            << "Apply check actions = " << Results.NumCheckAction.GetMean()
+            << " +- " << Results.NumCheckAction.GetStdErr() << endl;
         OutputFile << SearchParams.NumSimulations << "\t"
             << Results.Time.GetCount() << "\t"
             << Results.UndiscountedReturn.GetMean() << "\t"

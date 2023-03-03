@@ -26,15 +26,18 @@ public:
         double RaveDiscount;
         double RaveConstant;
         bool DisableTree;
+        bool RiskSensitive;
+        double beta;
+        bool ConsiderPast;
     };
 
     MCTS(const SIMULATOR& simulator, const PARAMS& params);
     ~MCTS();
 
-    int SelectAction();
+    int SelectAction(double cumulative_past_rew);
     bool Update(int action, int observation, double reward);
 
-    void UCTSearch();
+    void UCTSearch(double cumulative_past_rew);
     void RolloutSearch();
 
     double Rollout(STATE& state);
@@ -63,10 +66,10 @@ private:
     STATISTIC StatRolloutDepth;
     STATISTIC StatTotalReward;
 
-    int GreedyUCB(VNODE* vnode, bool ucb) const;
+    int GreedyUCB(VNODE* vnode, bool ucb, double cumulative_past_rew) const;
     int SelectRandom() const;
-    double SimulateV(STATE& state, VNODE* vnode);
-    double SimulateQ(STATE& state, QNODE& qnode, int action);
+    double SimulateV(STATE& state, VNODE* vnode, double cumulative_past_rew);
+    double SimulateQ(STATE& state, QNODE& qnode, int action, double cumulative_past_rew);
     void AddRave(VNODE* vnode, double totalReward);
     VNODE* ExpandNode(const STATE* state);
     void AddSample(VNODE* node, const STATE& state);

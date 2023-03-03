@@ -26,6 +26,11 @@ NETWORK::NETWORK(int numMachines, int ntype)
     }
 }
 
+string NETWORK::GetClassName() const 
+{
+    return "NETWORK";
+}
+
 void NETWORK::MakeRingNeighbours()
 {
     Neighbours.resize(NumMachines);

@@ -6,6 +6,7 @@
 #include "utils.h"
 #include <iostream>
 #include <math.h>
+#include <string>
 
 class BELIEF_STATE;
 
@@ -70,6 +71,9 @@ public:
     SIMULATOR();
     SIMULATOR(int numActions, int numObservations, double discount = 1.0);    
     virtual ~SIMULATOR();
+
+    // Return specefic name of child class
+    virtual std::string GetClassName() const = 0;
 
     // Create start start state (can be stochastic)
     virtual STATE* CreateStartState() const = 0;

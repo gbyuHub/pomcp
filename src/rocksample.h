@@ -22,6 +22,7 @@ public:
     };
     std::vector<ENTRY> Rocks;
     int Target; // Smart knowledge
+    int num_bad_rocks;
 };
 
 class ROCKSAMPLE : public SIMULATOR
@@ -30,6 +31,7 @@ public:
 
     ROCKSAMPLE(int size, int rocks);
 
+    virtual std::string GetClassName() const;
     virtual STATE* Copy(const STATE& state) const;
     virtual void Validate(const STATE& state) const;
     virtual STATE* CreateStartState() const;
@@ -65,6 +67,7 @@ protected:
     };
 
     void InitGeneral();
+    void Init_3_3();
     void Init_7_8();
     void Init_11_11();
     int GetObservation(const ROCKSAMPLE_STATE& rockstate, int rock) const;

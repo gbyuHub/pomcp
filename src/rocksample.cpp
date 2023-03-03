@@ -16,12 +16,19 @@ ROCKSAMPLE::ROCKSAMPLE(int size, int rocks)
     RewardRange = 20;
     Discount = 0.95;
 
-    if (size == 7 && rocks == 8)
+    if (size == 3 && rocks == 3)
+        Init_3_3();
+    else if (size == 7 && rocks == 8)
         Init_7_8();
     else if (size == 11 && rocks == 11)
         Init_11_11();
     else
         InitGeneral();
+}
+
+string ROCKSAMPLE::GetClassName() const
+{
+    return "ROCKSAMPLE";
 }
 
 void ROCKSAMPLE::InitGeneral()
@@ -40,6 +47,27 @@ void ROCKSAMPLE::InitGeneral()
         while (Grid(pos) >= 0);
         Grid(pos) = i;
         RockPos.push_back(pos);
+    }
+}
+
+void ROCKSAMPLE::Init_3_3()
+{
+    cout << "Using special layout for rocksample(3, 3)" << endl;
+
+    COORD rocks[] =
+    {
+        COORD(1, 0),
+        COORD(1, 2),
+        COORD(2, 1),
+    };
+
+    HalfEfficiencyDistance = 20;
+    StartPos = COORD(0, 1);
+    Grid.SetAllValues(-1);
+    for (int i = 0; i < NumRocks; ++i)
+    {
+        Grid(rocks[i]) = i;
+        RockPos.push_back(rocks[i]);
     }
 }
 
@@ -120,11 +148,13 @@ STATE* ROCKSAMPLE::CreateStartState() const
     ROCKSAMPLE_STATE* rockstate = MemoryPool.Allocate();
     rockstate->AgentPos = StartPos;
     rockstate->Rocks.clear();
+    rockstate->num_bad_rocks = 0;
     for (int i = 0; i < NumRocks; i++)
     {
         ROCKSAMPLE_STATE::ENTRY entry;
         entry.Collected = false;
         entry.Valuable = Bernoulli(0.5);
+        if (!entry.Valuable) rockstate->num_bad_rocks++;
         entry.Count = 0;
         entry.Measured = 0;
         entry.ProbValuable = 0.5;
