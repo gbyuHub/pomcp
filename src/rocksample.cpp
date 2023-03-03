@@ -191,7 +191,7 @@ bool ROCKSAMPLE::Step(STATE& state, int action,
                 }
                 else
                 {
-                    reward = +10;
+                    // reward = +10;
                     return true;
                 }
 
