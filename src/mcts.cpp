@@ -24,8 +24,8 @@ MCTS::PARAMS::PARAMS()
     RaveConstant(0.01),
     DisableTree(false),
     RiskSensitive(false),
-    beta(-0.8),
-    ConsiderPast(false)
+    beta(-0.6),
+    ConsiderPast(true)
 {
 }
 
@@ -77,8 +77,10 @@ bool MCTS::Update(int action, int observation, double reward)
     if (beliefs.Empty() && (!vnode || vnode->Beliefs().Empty()))
         return false;
 
-    if (Params.Verbose >= 2)
+    if (Params.Verbose >= 1) 
+    {   
         Simulator.DisplayBeliefs(beliefs, cout);
+    }
 
     // Find a state to initialise prior (only requires fully observed state)
     const STATE* state = 0;
@@ -152,7 +154,7 @@ void MCTS::UCTSearch(double cumulative_past_rew)
         Status.Phase = SIMULATOR::STATUS::TREE;
         if (Params.Verbose >= 1)
         {
-            cout << "Starting simulation" << endl;
+            cout << "Starting simulation " << n << endl;
             Simulator.DisplayState(*state, cout);
         }
 
@@ -177,6 +179,7 @@ void MCTS::UCTSearch(double cumulative_past_rew)
 double MCTS::SimulateV(STATE& state, VNODE* vnode, double cumulative_past_rew)
 {
     int action = GreedyUCB(vnode, true, cumulative_past_rew);
+    if (Params.Verbose >= 1) cout << "[TREE SEARCH]: select action " << action << endl;
 
     PeakTreeDepth = TreeDepth;
     if (TreeDepth >= Params.MaxDepth) // search horizon reached
@@ -200,6 +203,10 @@ double MCTS::SimulateQ(STATE& state, QNODE& qnode, int action, double cumulative
     if (Simulator.HasAlpha())
         Simulator.UpdateAlpha(qnode, state);
     bool terminal = Simulator.Step(state, action, observation, immediateReward);
+	if (Params.Verbose >= 1) {
+		if (immediateReward != 0)
+			cout << "[TREE] Sample a rock with reward " << immediateReward << endl;
+	}
     assert(observation >= 0 && observation < Simulator.GetNumObservations());
     History.Add(action, observation);
 
@@ -226,8 +233,17 @@ double MCTS::SimulateQ(STATE& state, QNODE& qnode, int action, double cumulative
     }
 
     double totalReward = immediateReward + Simulator.GetDiscount() * delayedReward;
-    qnode.Value.Add(totalReward);
-    return totalReward;
+    // backpropagate utility of trajectory return, which is the sum of 
+    if (Params.RiskSensitive) {
+        double trajectory_return = cumulative_past_rew + Simulator.GetDiscount() * totalReward;
+        double utility = exp(Params.beta * trajectory_return);
+        qnode.Utility.Add(utility);
+        return utility;
+    }
+    else {
+        qnode.Value.Add(totalReward);
+        return totalReward;
+    }
 }
 
 void MCTS::AddRave(VNODE* vnode, double totalReward)
@@ -276,6 +292,8 @@ int MCTS::GreedyUCB(VNODE* vnode, bool ucb, double cumulative_past_rew) const
     int N = vnode->Value.GetCount();
     double logN = log(N + 1);
     bool hasalpha = Simulator.HasAlpha();
+    if (Params.Verbose >= 1) cout << (ucb ? "----- PLANING -----" : "----- EXECUTION -----") << endl;
+    if (Params.Verbose >= 1) cout << "cumulative reward: " << cumulative_past_rew << endl;
 
     for (int action = 0; action < Simulator.GetNumActions(); action++)
     {
@@ -285,6 +303,10 @@ int MCTS::GreedyUCB(VNODE* vnode, bool ucb, double cumulative_past_rew) const
         QNODE& qnode = vnode->Child(action);
         q = qnode.Value.GetValue();
         n = qnode.Value.GetCount();
+
+        if (Params.Verbose >= 1) {
+            cout << "Action = " << action << ", q = " << q << ", n = " << n << ", UCB term = " << FastUCB(N, n, logN) << endl;
+        }
 
         if (Params.UseRave && qnode.AMAF.GetCount() > 0)
         {
@@ -304,13 +326,10 @@ int MCTS::GreedyUCB(VNODE* vnode, bool ucb, double cumulative_past_rew) const
         if (ucb)
             q += FastUCB(N, n, logN);
 
-        if (Params.RiskSensitive) 
+        // execution phase
+        if (!ucb && Params.RiskSensitive) 
         {
-            // Consider a simple concave function: x^0.5
-            // Ignore unavailable actions whose q values are -1e+10
-            // Add 80 as a baseline, since the worst case would be sampling 8 bad rocks, with undiscounted return -80 
-            if (Params.ConsiderPast) q += cumulative_past_rew; 
-            if (q + 80 >= 0) q = sqrt(q + 80);
+            q = (1.0 / Params.beta) * log(qnode.Utility.GetValue());
         }
 
         if (q >= bestq)
@@ -343,6 +362,10 @@ double MCTS::Rollout(STATE& state)
 
         int action = Simulator.SelectRandom(state, History, Status);
         terminal = Simulator.Step(state, action, observation, reward);
+		if (Params.Verbose >= 1) {
+			if (reward != 0)
+				cout << "[ROLLOUT] Sample a rock with reward " << reward << endl;
+		}
         History.Add(action, observation);
 
         if (Params.Verbose >= 4)

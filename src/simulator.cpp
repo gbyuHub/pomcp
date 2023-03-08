@@ -112,6 +112,7 @@ void SIMULATOR::Prior(const STATE* state, const HISTORY& history,
             int a = *i_action;
             QNODE& qnode = vnode->Child(a);
             qnode.Value.Set(0, 0);
+            qnode.Utility.Set(0, 0);
             qnode.AMAF.Set(0, 0);
         }
     }

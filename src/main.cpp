@@ -103,7 +103,6 @@ int main(int argc, char* argv[])
     SIMULATOR* real = 0;
     SIMULATOR* simulator = 0;
 
-    // only consider rocksample problem for now!
     // if (problem == "battleship")
     // {
     //     real = new BATTLESHIP(size, size, number);

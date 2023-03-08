@@ -93,6 +93,7 @@ void VNODE::SetChildren(int count, double value)
     {
         QNODE& qnode = Children[action];
         qnode.Value.Set(count, value);
+        qnode.Utility.Set(count, -1 * value);
         qnode.AMAF.Set(count, value);
     }
 }

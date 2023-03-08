@@ -71,8 +71,6 @@ void EXPERIMENT::Run()
         int observation;
         double reward;
         int action = mcts.SelectAction(cumulative_past_rew);
-        if (SearchParams.Verbose >= 1) 
-            cout << "Select action: " << action << endl;
         terminal = Real.Step(*state, action, observation, reward);
         cumulative_past_rew += reward;
 

@@ -68,6 +68,7 @@ public:
 
     VALUE<int> Value;
     VALUE<double> AMAF;
+    VALUE<double> Utility;
 
     void Initialise();
 
