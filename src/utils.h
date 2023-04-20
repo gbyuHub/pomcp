@@ -10,7 +10,7 @@
 #include <algorithm>
 
 #define LargeInteger 1000000
-#define Infinity 1e+10
+#define Infinity 1e+20
 #define Tiny 1e-10
 
 #ifdef DEBUG

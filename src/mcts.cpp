@@ -232,15 +232,22 @@ double MCTS::SimulateQ(STATE& state, QNODE& qnode, int action, double cumulative
         TreeDepth--;
     }
 
-    double totalReward = immediateReward + Simulator.GetDiscount() * delayedReward;
+    // double totalReward = immediateReward + Simulator.GetDiscount() * delayedReward;
     // backpropagate utility of trajectory return, which is the sum of 
     if (Params.RiskSensitive) {
-        double trajectory_return = cumulative_past_rew + Simulator.GetDiscount() * totalReward;
+        double totalReward = immediateReward + delayedReward;
+        qnode.Value.Add(totalReward);
+        double trajectory_return;
+        if (Params.ConsiderPast)
+            trajectory_return = cumulative_past_rew + totalReward;
+        else
+            trajectory_return = totalReward;
         double utility = exp(Params.beta * trajectory_return);
         qnode.Utility.Add(utility);
-        return utility;
+        return totalReward;
     }
     else {
+        double totalReward = immediateReward + Simulator.GetDiscount() * delayedReward;
         qnode.Value.Add(totalReward);
         return totalReward;
     }
@@ -294,20 +301,22 @@ int MCTS::GreedyUCB(VNODE* vnode, bool ucb, double cumulative_past_rew) const
     bool hasalpha = Simulator.HasAlpha();
     if (Params.Verbose >= 1) cout << (ucb ? "----- PLANING -----" : "----- EXECUTION -----") << endl;
     if (Params.Verbose >= 1) cout << "cumulative reward: " << cumulative_past_rew << endl;
-
     for (int action = 0; action < Simulator.GetNumActions(); action++)
     {
         double q, alphaq;
         int n, alphan;
 
         QNODE& qnode = vnode->Child(action);
-        q = qnode.Value.GetValue();
+        if (Params.RiskSensitive) {
+            q = (1.0 / Params.beta) * log(qnode.Utility.GetValue());
+        }
+        else
+            q = qnode.Value.GetValue();
         n = qnode.Value.GetCount();
 
         if (Params.Verbose >= 1) {
             cout << "Action = " << action << ", q = " << q << ", n = " << n << ", UCB term = " << FastUCB(N, n, logN) << endl;
         }
-
         if (Params.UseRave && qnode.AMAF.GetCount() > 0)
         {
             double n2 = qnode.AMAF.GetCount();
@@ -327,10 +336,12 @@ int MCTS::GreedyUCB(VNODE* vnode, bool ucb, double cumulative_past_rew) const
             q += FastUCB(N, n, logN);
 
         // execution phase
-        if (!ucb && Params.RiskSensitive) 
-        {
-            q = (1.0 / Params.beta) * log(qnode.Utility.GetValue());
-        }
+        // if (!ucb && Params.RiskSensitive) 
+        // {   
+        //     cout << "Utility = " << qnode.Utility.GetValue() << endl;
+        //     q = (1.0 / Params.beta) * log(qnode.Utility.GetValue());
+        //     cout << "q = " << q << endl;
+        // }
 
         if (q >= bestq)
         {
@@ -375,8 +386,10 @@ double MCTS::Rollout(STATE& state)
             Simulator.DisplayReward(reward, cout);
             Simulator.DisplayState(state, cout);
         }
-
-        totalReward += reward * discount;
+        if (Params.RiskSensitive)
+            totalReward += reward; // consider averaged reward 
+        else
+            totalReward += reward * discount;
         discount *= Simulator.GetDiscount();
     }
 

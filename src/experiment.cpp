@@ -157,6 +157,8 @@ void EXPERIMENT::Run()
     Results.Time.Add(timer.elapsed());
     Results.UndiscountedReturn.Add(undiscountedReturn);
     Results.DiscountedReturn.Add(discountedReturn);
+    double utility = exp(SearchParams.beta * undiscountedReturn);
+    Results.Utility.Add(utility);
     Results.CollectedBadRocks.Add(collected_bad_rocks_num);
     Results.CollectedGoodRocks.Add(collected_good_rocks_num);
     Results.NumCheckAction.Add(num_check_action);
@@ -164,6 +166,8 @@ void EXPERIMENT::Run()
         << ", average = " << Results.DiscountedReturn.GetMean() << endl;
     cout << "Undiscounted return = " << undiscountedReturn
         << ", average = " << Results.UndiscountedReturn.GetMean() << endl;
+    cout << "Utility of trajectory = " << utility
+        << ", average = " << (1.0 / SearchParams.beta) * log(Results.Utility.GetMean()) << endl;
     cout << "Number of bad rocks collected = " << collected_bad_rocks_num << endl;
     cout << "Number of good rocks collected = " << collected_good_rocks_num << endl;
     cout << "Number of check actions = " << num_check_action << endl;
@@ -214,6 +218,8 @@ void EXPERIMENT::DiscountedReturn()
             << " +- " << Results.UndiscountedReturn.GetStdErr() << endl
             << "Discounted return = " << Results.DiscountedReturn.GetMean()
             << " +- " << Results.DiscountedReturn.GetStdErr() << endl
+            << "Utility = " << (1.0 / SearchParams.beta) * log(Results.Utility.GetMean())
+            << " +- " << Results.Utility.GetStdErr() << endl
             << "Time = " << Results.Time.GetMean() << endl
             << "Collected bad rocks = " << Results.CollectedBadRocks.GetMean()
             << " +- " << Results.CollectedBadRocks.GetStdErr() << endl

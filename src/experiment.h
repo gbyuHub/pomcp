@@ -17,6 +17,7 @@ struct RESULTS
     STATISTIC Reward;
     STATISTIC DiscountedReturn;
     STATISTIC UndiscountedReturn;
+    STATISTIC Utility;
     STATISTIC CollectedBadRocks;
     STATISTIC CollectedGoodRocks;
     STATISTIC NumCheckAction;
@@ -28,6 +29,10 @@ inline void RESULTS::Clear()
     Reward.Clear();
     DiscountedReturn.Clear();
     UndiscountedReturn.Clear();
+    Utility.Clear();
+    CollectedBadRocks.Clear();
+    CollectedGoodRocks.Clear();
+    NumCheckAction.Clear();
 }
 
 //----------------------------------------------------------------------------

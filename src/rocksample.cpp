@@ -15,6 +15,7 @@ ROCKSAMPLE::ROCKSAMPLE(int size, int rocks)
     NumObservations = 3;
     RewardRange = 20;
     Discount = 0.95;
+    // Discount = 1.0;
 
     if (size == 3 && rocks == 3)
         Init_3_3();
@@ -191,7 +192,7 @@ bool ROCKSAMPLE::Step(STATE& state, int action,
                 }
                 else
                 {
-                    // reward = +10;
+                    reward = +10;
                     return true;
                 }
 
@@ -265,7 +266,9 @@ bool ROCKSAMPLE::Step(STATE& state, int action,
 
     if (rockstate.Target < 0 || rockstate.AgentPos == RockPos[rockstate.Target])
         rockstate.Target = SelectTarget(rockstate);
-
+    if (reward == -100) {
+        cout << "action = " << action << endl;
+    }
     assert(reward != -100);
     return false;
 }
